@@ -18,7 +18,7 @@ st.markdown(
         /* Paleta CUN */
         :root {
             --cun-green: #22c55e;
-            --cun-green-dark: #15803d;
+            --cun-green-dark: #15804d;
             --cun-blue-dark: #0f172a;
             --cun-gray-medium: #334155;
             --cun-gray-light: #f1f5f9;
@@ -330,10 +330,12 @@ elif page == "⚙️ Flujo de Datos y Modelos":
 
     st.markdown("---")
     st.markdown("#### 🔍 Detalle Técnico (STT)")
-    st.markdown("""
+    st.markdown(
+        """
         - **Motor**: *Whisper Large V3* (OpenAI). Alta precisión en acentos latinos y jerga técnica.
         - **Salida**: Texto plano con marca de tiempo por cada frase, ID de agente, duración y resultado de venta (Sí/No).
-    """)
+    """
+    )
 
     with st.expander("📝 Ejemplo de Transcripción (Mockup)"):
         st.code(
@@ -495,7 +497,8 @@ elif page == "⚙️ Flujo de Datos y Modelos":
             )
 
         with st.expander("📌 Ver 9 Categorías de Objeción"):
-            st.markdown("""
+            st.markdown(
+                """
             1. Económica / Costo  
             2. Falta de Tiempo  
             3. Competencia (otra universidad)  
@@ -505,7 +508,8 @@ elif page == "⚙️ Flujo de Datos y Modelos":
             7. Familiar / Apoyo familiar  
             8. Académica (programa no encaja)  
             9. Genérica / Otra
-            """)
+            """
+            )
 
 # ---------- PÁGINA 3: ERRORES IDENTIFICADOS ----------
 elif page == "🔴 Errores Identificados":
