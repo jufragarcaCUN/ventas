@@ -40,6 +40,7 @@ st.title("🎯 Análisis de Objeciones COE - CUN")
 st.markdown("### *Informe de Auditoría y Control de Llamadas Operativas*")
 st.markdown("---")
 
+# Ruta relativa corregida para GitHub/Streamlit Cloud
 RUTA_REAL_EXCEL = "carreras_homologadas_1.xlsx"
 
 # ==================== 2. TABLA EXPLICATIVA (GLOSARIO REAL DE LLAMADAS) ====================
@@ -210,37 +211,43 @@ if df is not None and not df.empty:
 
         st.markdown("---")
 
-        # ==================== GRÁFICA INTERACTIVA HORIZONTAL REESTRUCTURADA ====================
-        st.subheader("📈 Distribución de Objeciones por Top 10 Programas Académicos")
+        # ==================== GRÁFICA ENFOQUE TOTAL EN OBJECIONES (CORREGIDA) ====================
+        st.subheader("📈 Ranking Global de Objeciones y Programas Afectados")
+        st.markdown("*Análisis del COE: El eje Y muestra las barreras de cierre en orden de impacto.*")
 
-        # Identificar los 10 programas con más llamadas caídas primero
-        top_10_prog_nombres = df_filtrado[col_programa].value_counts().head(10).index
+        # 1. Agrupar por Objeción para ordenar el ranking general
+        df_obj_totales = df_filtrado[col_objecion_cat].value_counts().reset_index()
+        df_obj_totales.columns = ["Tipo de Objeción", "Total"]
 
-        # Filtrar el dataframe solo para esos 10 programas y agrupar por Programa + Objeción
-        df_top_grafica = df_filtrado[df_filtrado[col_programa].isin(top_10_prog_nombres)]
-        df_agrupado = (
-            df_top_grafica.groupby([col_programa, col_objecion_cat])
+        # 2. Agrupar por Objeción y Programa para subdividir cada barra
+        df_desglose = (
+            df_filtrado.groupby([col_objecion_cat, col_programa])
             .size()
             .reset_index(name="Cantidad de Llamadas")
         )
-        df_agrupado.columns = ["Nombre del Programa", "Tipo de Objeción", "Cantidad de Llamadas"]
+        df_desglose.columns = ["Tipo de Objeción", "Programa Académico", "Cantidad de Llamadas"]
 
-        # Gráfica horizontal apilada (Muestra las objeciones reales dentro de cada barra)
+        # 3. Generar gráfica interactiva horizontal donde la Objeción manda
         fig = px.bar(
-            df_agrupado,
+            df_desglose,
             x="Cantidad de Llamadas",
-            y="Nombre del Programa",
-            color="Tipo de Objeción",
+            y="Tipo de Objeción",
+            color="Programa Académico",
             orientation="h",
-            color_discrete_sequence=px.colors.sequential.Greens_r, # Degradados verdes institucionales
-            labels={"Tipo de Objeción": "Objeción Detectada"}
+            color_discrete_sequence=px.colors.qualitative.Bold,
+            category_orders={"Tipo de Objeción": df_obj_totales["Tipo de Objeción"].tolist()}
         )
 
         fig.update_layout(
             yaxis={"categoryorder": "total ascending"},
-            margin=dict(l=320, r=20, t=20, b=20),  # Espacio para los nombres largos de carreras
-            height=650,
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            margin=dict(l=220, r=20, t=20, b=20),
+            height=600,
+            legend=dict(
+                title="Programas Académicos",
+                orientation="v",
+                yanchor="top", y=1,
+                xanchor="left", x=1.02
+            )
         )
 
         st.plotly_chart(fig, use_container_width=True)
