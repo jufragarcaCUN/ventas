@@ -90,22 +90,22 @@ st.markdown(
 )
 
 st.title("🎯 Análisis de Objeciones COE - CUN")
-st.markdown("### *Informe Clínico de Auditoría y Control de Procesos Operativos*")
+st.markdown("### *Informe de Auditoría y Control de Llamadas Operativas*")
 st.markdown("---")
 
 RUTA_REAL_EXCEL = "carreras_homologadas_1.xlsx"
 
 # ==================== 2. MATRIZ DE CONFIGURACIÓN CONCEPTUAL ====================
 glosario_data = [
-    {"cat": "Económica", "significado": "El contacto manifiesta falta de liquidez, objeta el costo de la matrícula o requiere alternativas de financiación especiales durante el contacto."},
-    {"cat": "Tiempo/Flexibilidad", "significado": "El contacto reporta incompatibilidad horaria con su jornada laboral activa, alta carga operacional o indisponibilidad de tiempo."},
-    {"cat": "Confianza/Legalidad", "significado": "El contacto expresa dudas explícitas sobre la acreditación institucional, validez del título ante el Ministerio de Educación o códigos SNIES."},
-    {"cat": "Metodología", "significado": "El contacto manifiesta resistencia o apatía hacia el modelo educativo propuesto, limitaciones técnicas o problemas de conectividad."},
-    {"cat": "Terceros", "significado": "El contacto indica ausencia de autonomía en la toma de decisiones, postergando la resolución a la consulta con familiares o jefes directos."},
-    {"cat": "Competencia", "significado": "El contacto declara estar en proceso de evaluación o comparación activa frente a la oferta académica y aranceles de otras instituciones."},
-    {"cat": "Documentación/Requisitos", "significado": "El contacto reporta retrasos en la expedición o entrega de soportes obligatorios (ICFES, actas de grado, certificados de notas)."},
-    {"cat": "Ubicación/Sedes", "significado": "El contacto argumenta barreras geográficas por distancia hacia los centros de servicio físico o restricciones de movilidad urbana."},
-    {"cat": "Desinterés/Aplazamiento", "significado": "El contacto solicita voluntariamente diferir el proceso de admisión para periodos futuros o desiste explícitamente del interés comercial."}
+    {"cat": "Económica", "significado": "El contacto manifiesta falta de liquidez, objeta el costo de la matrícula o requiere alternativas de financiación especiales."},
+    {"cat": "Tiempo/Flexibilidad", "significado": "El contacto reporta incompatibilidad horaria con su jornada laboral activa o indisponibilidad de tiempo."},
+    {"cat": "Confianza/Legalidad", "significado": "El contacto expresa dudas explícitas sobre la acreditación institucional o códigos SNIES."},
+    {"cat": "Metodología", "significado": "El contacto manifiesta resistencia hacia el modelo educativo propuesto, limitaciones técnicas o problemas de conectividad."},
+    {"cat": "Terceros", "significado": "El contacto indica ausencia de autonomía en la toma de decisiones (debe consultar con familiares o jefes)."},
+    {"cat": "Competencia", "significado": "El contacto declara estar en proceso de comparación frente a la oferta y aranceles de otras instituciones."},
+    {"cat": "Documentación/Requisitos", "significado": "El contacto reporta retrasos en la expedición o entrega de soportes obligatorios (ICFES, actas de grado)."},
+    {"cat": "Ubicación/Sedes", "significado": "El contacto argumenta barreras geográficas por distancia hacia los centros de servicio físico."},
+    {"cat": "Desinterés/Aplazamiento", "significado": "El contacto solicita aplazar el proceso para periodos futuros o desiste explícitamente."}
 ]
 
 # ==================== 3. PROCESAMIENTO Y DEPURACIÓN DE REGISTROS ====================
@@ -173,7 +173,7 @@ if df is not None and not df.empty:
         else:
             rango_fechas_str = "Periodo Dinámico"
 
-        # ==================== BALANCES MÉTRICOS CONTROLADOS ====================
+        # ==================== BALANCES MÉTRICOS ====================
         total_llamadas_filtradas = len(df_filtrado)
         total_universo_llamadas = 144000
         porcentaje_penetracion = (total_llamadas_filtradas / total_universo_llamadas) * 100
@@ -197,8 +197,7 @@ if df is not None and not df.empty:
         st.markdown("---")
 
         # ==================== EVALUACIÓN POR MUESTRA ABSOLUTA ====================
-        st.subheader("📈 Análisis de Distribución por Volúmenes Absolutos")
-        st.markdown("*Representación de la carga neta de interacciones fallidas ordenadas por volumen total.*")
+        st.subheader("📈 Distribución por Volúmenes Absolutos")
         
         df_obj_totales = df_filtrado[col_objecion_cat].value_counts().reset_index()
         df_obj_totales.columns = ["Tipo de Objeción", "Total"]
@@ -246,41 +245,50 @@ if df is not None and not df.empty:
 
         st.markdown("---")
 
-        # ==================== INSIGHTS GERENCIALES ABSOLUTOS DIRECTOS ====================
-        if not df_obj_totales.empty:
-            mayor_objecion = df_obj_totales.iloc[0]["Tipo de Objeción"]
-            cantidad_mayor = df_obj_totales.iloc[0]["Total"]
-            
-            df_mayor_obj = df_filtrado[df_filtrado[col_objecion_cat] == mayor_objecion]
-            prog_afectado = df_mayor_obj[col_programa].value_counts().idxmax() if not df_mayor_obj.empty else "N/A"
-            cantidad_prog_afectado = df_mayor_obj[col_programa].value_counts().max() if not df_mayor_obj.empty else 0
+        # ==================== INSIGHTS ABSOLUTOS RE-ESTRUCTURADOS (DIRECTOS) ====================
+        if len(df_obj_totales) >= 2:
+            # Datos de la objeción #1
+            obj_1 = df_obj_totales.iloc[0]["Tipo de Objeción"]
+            cant_1 = df_obj_totales.iloc[0]["Total"]
+            df_m1 = df_filtrado[df_filtrado[col_objecion_cat] == obj_1]
+            prog_m1 = df_m1[col_programa].value_counts().idxmax()
+            cant_prog_m1 = df_m1[col_programa].value_counts().max()
 
-            # Encontrar el programa con más volumen absoluto general de llamadas caídas y ver su objeción principal
-            prog_top_general = df_filtrado[col_programa].value_counts().idxmax()
-            df_prog_top = df_filtrado[df_filtrado[col_programa] == prog_top_general]
-            peor_obj_prog_top = df_prog_top[col_objecion_cat].value_counts().idxmax()
-            cant_peor_obj_prog_top = df_prog_top[col_objecion_cat].value_counts().max()
+            # Datos de la objeción #2
+            obj_2 = df_obj_totales.iloc[1]["Tipo de Objeción"]
+            cant_2 = df_obj_totales.iloc[1]["Total"]
+            df_m2 = df_filtrado[df_filtrado[col_objecion_cat] == obj_2]
+            prog_m2 = df_m2[col_programa].value_counts().idxmax()
+            cant_prog_m2 = df_m2[col_programa].value_counts().max()
 
             col_ins1, col_ins2 = st.columns(2)
             with col_ins1:
                 st.markdown(
                     f"""
                     <div class="insight-card">
-                        <h3>📋 Diagnóstico Directo de Objeciones</h3>
+                        <h3>📊 Distribución General de Datos</h3>
                         <ul>
-                            <li>La objeción con mayor volumen general es <b>{mayor_objecion}</b> ({cantidad_mayor:,} llamadas), y el programa que más interacciones aporta a esta categoría es <b>{prog_afectado}</b> con <b>{cantidad_prog_afectado:,}</b> casos.</li>
-                            <li>En el programa con mayor cantidad de llamadas fallidas (<b>{prog_top_general}</b>), la mayoría de los contactos tiene objeciones por <b>{peor_obj_prog_top}</b> (<b>{cant_peor_obj_prog_top:,}</b> llamadas).</li>
+                            <li>La objeción con mayor volumen es <b>{obj_1}</b> ({cant_1:,} llamadas), concentrándose principalmente en el programa <b>{prog_m1}</b> con <b>{cant_prog_m1:,}</b> casos.</li>
+                            <li>La segunda objeción con mayor registro es <b>{obj_2}</b> ({cant_2:,} llamadas), acumulando su mayor cantidad en el programa <b>{prog_m2}</b> con <b>{cant_prog_m2:,}</b> casos.</li>
                         </ul>
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
             with col_ins2:
+                # Encontrar el programa con más volumen absoluto general y ver su objeción número uno
+                prog_top_general = df_filtrado[col_programa].value_counts().idxmax()
+                df_prog_top = df_filtrado[df_filtrado[col_programa] == prog_top_general]
+                peor_obj_prog_top = df_prog_top[col_objecion_cat].value_counts().idxmax()
+                cant_peor_obj_prog_top = df_prog_top[col_objecion_cat].value_counts().max()
+                
                 st.markdown(
-                    """
+                    f"""
                     <div class="insight-card">
-                        <h3>📌 Nota de Lectura</h3>
-                        <p>Esta sección expone los datos de forma directa basados en el conteo total de la sala, reflejando principalmente el comportamiento de los programas con mayor cantidad de aspirantes registrados.</p>
+                        <h3>📈 Mayor Foco de Pérdida Directa</h3>
+                        <ul>
+                            <li>El programa que registra la mayor cantidad neta de llamadas caídas en la sala es <b>{prog_top_general}</b>, y su principal motivo de pérdida es la objeción por <b>{peor_obj_prog_top}</b> con un volumen de <b>{cant_peor_obj_prog_top:,}</b> casos.</li>
+                        </ul>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -289,11 +297,8 @@ if df is not None and not df.empty:
         st.markdown("---")
 
         # ==================== 5. ACORDEÓN: EVALUACIÓN RELATIVA NORMALIZADA ====================
-        with st.expander("📊 ANÁLISIS PORCENTUAL POR PROGRAMA (Normalización de Impacto Relativo)"):
-            st.markdown("### 🔍 Métricas Distribucionales Internas")
-            st.markdown("""
-            *Esta sección calcula la proporción interna de cada objeción calculada exclusivamente sobre el **100% de los registros correspondientes a cada programa específico**.*
-            """)
+        with st.expander("📊 ANÁLISIS PORCENTUAL POR PROGRAMA (Impacto Relativo Proporcional)"):
+            st.markdown("### 🔍 Datos Distribucionales Internos")
             
             # Procesamiento matricial relativo
             df_pct_base = df_filtrado.groupby([col_programa, col_objecion_cat]).size().reset_index(name="Conteo")
@@ -327,7 +332,7 @@ if df is not None and not df.empty:
             )
             st.plotly_chart(fig_pct, use_container_width=True)
 
-            st.markdown("##### 📈 Matriz de Fricción Relativa (% Promedio Ponderado)")
+            st.markdown("##### 📈 Matriz de Fricción Proporcional por Carrera")
             df_tabla_pct = df_pct_final.groupby(col_objecion_cat).agg(
                 Porcentaje_Promedio=("Porcentaje del Programa", "mean"),
                 Carrera_Mas_Golpeada=(col_programa, lambda x: df_pct_final.loc[x.index].sort_values(by="Porcentaje del Programa", ascending=False).iloc[0][col_programa]),
@@ -338,9 +343,9 @@ if df is not None and not df.empty:
                 df_tabla_pct,
                 column_config={
                     "col_objecion_cat": "Categoría de Objeción",
-                    "Porcentaje_Promedio": st.column_config.NumberColumn("Fricción Promedio Inter-Programa", format="%.2f %%"),
-                    "Carrera_Mas_Golpeada": "Unidad de Máxima Exposición",
-                    "Porcentaje_Maximo": st.column_config.ProgressColumn("Desviación Crítica Local", format="%.2f %%", min_value=0, max_value=100, color="blue")
+                    "Porcentaje_Promedio": st.column_config.NumberColumn("Fricción Promedio General", format="%.2f %%"),
+                    "Carrera_Mas_Golpeada": "Programa con Mayor Fricción Interna",
+                    "Porcentaje_Maximo": st.column_config.ProgressColumn("Impacto Máximo Local (%)", format="%.2f %%", min_value=0, max_value=100, color="blue")
                 },
                 use_container_width=True,
                 hide_index=True
@@ -348,30 +353,41 @@ if df is not None and not df.empty:
 
             # Insights descriptivos porcentuales directos y sencillos
             if not df_tabla_pct.empty:
-                peor_obj_pct = df_tabla_pct.iloc[0][col_objecion_cat]
-                carrera_critica = df_tabla_pct.iloc[0]["Carrera_Mas_Golpeada"]
-                max_critico = df_tabla_pct.iloc[0]["Porcentaje_Maximo"]
+                # Ordenar el df_pct_final de mayor a menor para encontrar los impactos relativos más altos y puros
+                df_impactos_puros = df_pct_final.sort_values(by="Porcentaje del Programa", ascending=False)
+                
+                carrera_pct_1 = df_impactos_puros.iloc[0][col_programa]
+                obj_pct_1 = df_impactos_puros.iloc[0][col_objecion_cat]
+                val_pct_1 = df_impactos_puros.iloc[0]["Porcentaje del Programa"]
+
+                carrera_pct_2 = df_impactos_puros.iloc[1][col_programa] if len(df_impactos_puros) > 1 else "N/A"
+                obj_pct_2 = df_impactos_puros.iloc[1][col_objecion_cat] if len(df_impactos_puros) > 1 else "N/A"
+                val_pct_2 = df_impactos_puros.iloc[1]["Porcentaje del Programa"] if len(df_impactos_puros) > 1 else 0
 
                 col_pct_ins1, col_pct_ins2 = st.columns(2)
                 with col_pct_ins1:
                     st.markdown(
                         f"""
                         <div class="insight-card-pct">
-                            <h3>🔍 Análisis de Impacto por Programa</h3>
+                            <h3>🔍 Programas con Mayor Concentración Porcentual</h3>
                             <ul>
-                                <li>El programa con mayor impacto porcentual por una sola objeción es <b>{carrera_critica}</b>, donde la mayoría de sus aspirantes desiste por <b>{peor_obj_pct}</b>, representando el <b>{max_critico:.2f}%</b> de sus casos particulares.</li>
-                                <li>Al evaluar proporcionalmente cada carrera, la categoría que se repite con mayor consistencia porcentual alta como motivo principal de no-cierre es <b>{peor_obj_pct}</b>.</li>
+                                <li>En el programa <b>{carrera_pct_1}</b>, el <b>{val_pct_1:.2f}%</b> de sus llamadas caídas se concentran exclusivamente bajo la objeción de <b>{obj_pct_1}</b>.</li>
+                                <li>Para el programa <b>{carrera_pct_2}</b>, la objeción que genera mayor impacto proporcional interno es <b>{obj_pct_2}</b>, acumulando el <b>{val_pct_2:.2f}%</b> de sus motivos de no-cierre.</li>
                             </ul>
                         </div>
                         """,
                         unsafe_allow_html=True
                     )
                 with col_pct_ins2:
+                    peor_transversal_pct = df_tabla_pct.iloc[0][col_objecion_cat]
+                    prom_transversal_pct = df_tabla_pct.iloc[0]["Porcentaje_Promedio"]
                     st.markdown(
                         f"""
                         <div class="insight-card-pct">
-                            <h3>📊 Comportamiento Relativo</h3>
-                            <p>Esta perspectiva permite ver qué objeción domina el comportamiento interno de cada carrera de forma independiente, aislando el impacto del tamaño o volumen total de estudiantes de la misma.</p>
+                            <h3>📈 Impacto Proporcional Dominante</h3>
+                            <ul>
+                                <li>Al evaluar de forma independiente el 100% de cada carrera, la categoría que promedia el mayor nivel de afectación interna en el portafolio evaluado es <b>{peor_transversal_pct}</b> con un índice del <b>{prom_transversal_pct:.2f}%</b>.</li>
+                            </ul>
                         </div>
                         """,
                         unsafe_allow_html=True
