@@ -246,24 +246,30 @@ if df is not None and not df.empty:
 
         st.markdown("---")
 
-        # ==================== INSIGHTS GERENCIALES ABSOLUTOS ====================
+        # ==================== INSIGHTS GERENCIALES ABSOLUTOS DIRECTOS ====================
         if not df_obj_totales.empty:
             mayor_objecion = df_obj_totales.iloc[0]["Tipo de Objeción"]
             cantidad_mayor = df_obj_totales.iloc[0]["Total"]
-            porcentaje_sobre_caidas = (cantidad_mayor / total_llamadas_filtradas) * 100
-
+            
             df_mayor_obj = df_filtrado[df_filtrado[col_objecion_cat] == mayor_objecion]
             prog_afectado = df_mayor_obj[col_programa].value_counts().idxmax() if not df_mayor_obj.empty else "N/A"
+            cantidad_prog_afectado = df_mayor_obj[col_programa].value_counts().max() if not df_mayor_obj.empty else 0
+
+            # Encontrar el programa con más volumen absoluto general de llamadas caídas y ver su objeción principal
+            prog_top_general = df_filtrado[col_programa].value_counts().idxmax()
+            df_prog_top = df_filtrado[df_filtrado[col_programa] == prog_top_general]
+            peor_obj_prog_top = df_prog_top[col_objecion_cat].value_counts().idxmax()
+            cant_peor_obj_prog_top = df_prog_top[col_objecion_cat].value_counts().max()
 
             col_ins1, col_ins2 = st.columns(2)
             with col_ins1:
                 st.markdown(
                     f"""
                     <div class="insight-card">
-                        <h3>📋 Diagnóstico de Fricción Absoluta</h3>
+                        <h3>📋 Diagnóstico Directo de Objeciones</h3>
                         <ul>
-                            <li><b>Prevalencia de Barrera Comercial:</b> La categoría de objeción <b>'{mayor_objecion}'</b> consolida el mayor volumen de deserción en el embudo telefónico, con un registro de <b>{cantidad_mayor:,} interacciones</b>, representando el <b>{porcentaje_sobre_caidas:.1f}%</b> del histórico analizado.</li>
-                            <li><b>Concentración por Unidad Académica:</b> El programa de <b>{prog_afectado}</b> exhibe la mayor densidad volumétrica asociada a este factor de rechazo.</li>
+                            <li>La objeción con mayor volumen general es <b>{mayor_objecion}</b> ({cantidad_mayor:,} llamadas), y el programa que más interacciones aporta a esta categoría es <b>{prog_afectado}</b> con <b>{cantidad_prog_afectado:,}</b> casos.</li>
+                            <li>En el programa con mayor cantidad de llamadas fallidas (<b>{prog_top_general}</b>), la mayoría de los contactos tiene objeciones por <b>{peor_obj_prog_top}</b> (<b>{cant_peor_obj_prog_top:,}</b> llamadas).</li>
                         </ul>
                     </div>
                     """,
@@ -273,8 +279,8 @@ if df is not None and not df.empty:
                 st.markdown(
                     """
                     <div class="insight-card">
-                        <h3>📌 Consideración Metodológica</h3>
-                        <p>Los indicadores basados en volúmenes absolutos exponen las fugas globales de la operación, reflejando el comportamiento de las líneas de producto masivas o de alta densidad poblacional.</p>
+                        <h3>📌 Nota de Lectura</h3>
+                        <p>Esta sección expone los datos de forma directa basados en el conteo total de la sala, reflejando principalmente el comportamiento de los programas con mayor cantidad de aspirantes registrados.</p>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -286,8 +292,7 @@ if df is not None and not df.empty:
         with st.expander("📊 ANÁLISIS PORCENTUAL POR PROGRAMA (Normalización de Impacto Relativo)"):
             st.markdown("### 🔍 Métricas Distribucionales Internas")
             st.markdown("""
-            *Evaluación mediante normalización estadística. Esta sección calcula la proporción interna de cada objeción calculada exclusivamente sobre el **100% de los registros fallidos correspondientes a cada programa específico**.*
-            *Aísla el sesgo poblacional y permite identificar la tasa de fricción intrínseca de los programas de nicho.*
+            *Esta sección calcula la proporción interna de cada objeción calculada exclusivamente sobre el **100% de los registros correspondientes a cada programa específico**.*
             """)
             
             # Procesamiento matricial relativo
@@ -341,10 +346,9 @@ if df is not None and not df.empty:
                 hide_index=True
             )
 
-            # Insights descriptivos porcentuales (Sin planes de acción)
+            # Insights descriptivos porcentuales directos y sencillos
             if not df_tabla_pct.empty:
                 peor_obj_pct = df_tabla_pct.iloc[0][col_objecion_cat]
-                promedio_peor = df_tabla_pct.iloc[0]["Porcentaje_Promedio"]
                 carrera_critica = df_tabla_pct.iloc[0]["Carrera_Mas_Golpeada"]
                 max_critico = df_tabla_pct.iloc[0]["Porcentaje_Maximo"]
 
@@ -353,10 +357,10 @@ if df is not None and not df.empty:
                     st.markdown(
                         f"""
                         <div class="insight-card-pct">
-                            <h3>🔍 Análisis de Concentración Relativa</h3>
+                            <h3>🔍 Análisis de Impacto por Programa</h3>
                             <ul>
-                                <li><b>Desviación Proporcional Dominante:</b> Evaluadas las variables de manera interna por unidad, el factor <b>'{peor_obj_pct}'</b> registra la mayor tasa de incidencia promedio con un <b>{promedio_peor:.2f}%</b> de representatividad transversal.</li>
-                                <li><b>Foco Crítico Localizado:</b> El programa académico de <b>{carrera_critica}</b> muestra el mayor nivel de afectación específica por esta causa, aislando un <b>{max_critico:.2f}%</b> de sus motivos de no-cierre bajo esta única tipología.</li>
+                                <li>El programa con mayor impacto porcentual por una sola objeción es <b>{carrera_critica}</b>, donde la mayoría de sus aspirantes desiste por <b>{peor_obj_pct}</b>, representando el <b>{max_critico:.2f}%</b> de sus casos particulares.</li>
+                                <li>Al evaluar proporcionalmente cada carrera, la categoría que se repite con mayor consistencia porcentual alta como motivo principal de no-cierre es <b>{peor_obj_pct}</b>.</li>
                             </ul>
                         </div>
                         """,
@@ -366,8 +370,8 @@ if df is not None and not df.empty:
                     st.markdown(
                         f"""
                         <div class="insight-card-pct">
-                            <h3>📊 Comportamiento de Variabilidad</h3>
-                            <p>La normalización de la muestra evidencia que, con independencia de la densidad del volumen absoluto, la vulnerabilidad frente a la tipología <b>'{peor_obj_pct}'</b> en el programa <b>{carrera_critica}</b> altera significativamente la distribución esperada del embudo de admisiones para dicha línea.</p>
+                            <h3>📊 Comportamiento Relativo</h3>
+                            <p>Esta perspectiva permite ver qué objeción domina el comportamiento interno de cada carrera de forma independiente, aislando el impacto del tamaño o volumen total de estudiantes de la misma.</p>
                         </div>
                         """,
                         unsafe_allow_html=True
