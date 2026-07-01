@@ -1,851 +1,305 @@
-import streamlit as st
-import plotly.graph_objects as go
+import os
+import warnings
 import pandas as pd
-import numpy as np
+import streamlit as st
+import plotly.express as px
 
-# -------------------- CONFIGURACIÓN DE LA PÁGINA --------------------
+# Ocultar advertencias de formato
+warnings.filterwarnings("ignore")
+
+# ==================== 1. CONFIGURACIÓN DE LA INTERFAZ Y ESTILO INSTITUCIONAL CUN ====================
 st.set_page_config(
-    page_title="Sistema de Evaluación de Llamadas | COE",
-    page_icon="🎓",
-    layout="wide",
-    initial_sidebar_state="expanded",
+    page_title="Análisis de Objeciones COE", page_icon="🎯", layout="wide"
 )
 
-# ==================== CSS PERSONALIZADO (PALETA CUN) ====================
 st.markdown(
     """
     <style>
-        /* Paleta CUN */
-        :root {
-            --cun-green: #22c55e;
-            --cun-green-dark: #15803d;
-            --cun-blue-dark: #0f172a;
-            --cun-gray-medium: #334155;
-            --cun-gray-light: #f1f5f9;
-            --white: #ffffff;
-        }
-
-        /* Fondo general */
-        .main .block-container {
-            background-color: #f8fafc;
-            padding: 2rem 3rem;
-        }
-
-        /* Títulos */
-        h1, h2, h3, h4, h5 {
-            font-family: 'Segoe UI', sans-serif;
-            color: var(--cun-blue-dark);
-        }
-        .main-title {
-            font-size: 2.5rem;
-            font-weight: 900;
-            color: var(--cun-blue-dark);
-            border-left: 10px solid var(--cun-green);
-            padding-left: 25px;
-            margin-bottom: 1.5rem;
-        }
-        .section-title {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: var(--cun-blue-dark);
-            border-bottom: 3px solid #ffc107;
-            padding-bottom: 10px;
-            display: inline-block;
-            margin-bottom: 1.5rem;
-        }
-
-        /* Tarjetas (cards) */
-        .card-cun {
-            background: var(--white);
-            padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            border-left: 5px solid var(--cun-green);
-            margin-bottom: 1.5rem;
-            transition: transform 0.2s;
-        }
-        .card-cun:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.12);
-        }
-        .card-cun h3 {
-            margin-top: 0;
-            color: var(--cun-blue-dark);
-        }
-        .card-dark {
-            background: var(--cun-blue-dark);
-            color: white;
-            padding: 1.5rem;
-            border-radius: 12px;
-            border-left: 5px solid var(--cun-green);
-            margin-bottom: 1.5rem;
-        }
-        .card-dark h3 {
-            color: white !important;
-        }
-
-        /* Sidebar personalizado */
-        [data-testid="stSidebar"] {
-            background-color: var(--cun-blue-dark) !important;
-            padding: 2rem 1rem !important;
-        }
-        [data-testid="stSidebar"] * {
-            color: #e2e8f0 !important;
-            font-family: 'Segoe UI', sans-serif;
-        }
-        [data-testid="stSidebar"] .stRadio label {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 16px;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.85rem;
-            color: #94a3b8 !important;
-            background: transparent;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            margin: 2px 0;
-        }
-        [data-testid="stSidebar"] .stRadio label:hover {
-            background: rgba(255,255,255,0.05);
-            color: white !important;
-        }
-        [data-testid="stSidebar"] .stRadio label > div:first-child {
-            display: none !important;
-        }
-        [data-testid="stSidebar"] .stRadio label[data-baseweb="radio"] {
-            background: rgba(34, 197, 94, 0.15) !important;
-            color: var(--cun-green) !important;
-            border-left: 3px solid var(--cun-green);
-            border-radius: 0 8px 8px 0;
-            padding-left: 13px;
-        }
-        [data-testid="stSidebar"] .stRadio label[data-baseweb="radio"] * {
-            color: var(--cun-green) !important;
-        }
-
-        /* Botones */
-        .stButton button {
-            background: var(--cun-blue-dark) !important;
-            color: white !important;
-            font-weight: 700 !important;
-            border-radius: 30px !important;
-            border: none !important;
-            padding: 0.5rem 1.5rem !important;
-            transition: all 0.3s ease !important;
-        }
-        .stButton button:hover {
-            background: var(--cun-green) !important;
-            transform: scale(1.02);
-            box-shadow: 0 8px 20px rgba(34, 197, 94, 0.3);
-        }
-
-        /* Expanders */
-        .streamlit-expanderHeader {
-            font-weight: 700 !important;
-            color: var(--cun-blue-dark) !important;
-            background: var(--cun-gray-light) !important;
-            border-radius: 8px !important;
-        }
-
-        /* Badges */
-        .badge-pos {
-            background: #d4edda; color: #155724; padding: 4px 14px; border-radius: 20px; font-weight: 700; display: inline-block;
-        }
-        .badge-neg {
-            background: #f8d7da; color: #721c24; padding: 4px 14px; border-radius: 20px; font-weight: 700; display: inline-block;
-        }
-        .badge-cun {
-            background: #22c55e; color: white; padding: 4px 14px; border-radius: 20px; font-weight: 700; display: inline-block;
-        }
-        .error-card {
-            background: #fff5f5;
-            border-left: 5px solid #dc3545;
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-        }
-        .error-card h4 {
-            color: #dc3545;
-            margin-top: 0;
-        }
-        .sql-block {
-            background: #0f172a;
-            color: #e2e8f0;
-            padding: 1rem;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.85rem;
-            overflow-x: auto;
-        }
-        .status-solved {
-            background: #d4edda; padding: 4px 14px; border-radius: 20px; font-weight: 700; color: #155724;
-        }
-        .status-progress {
-            background: #fff3cd; padding: 4px 14px; border-radius: 20px; font-weight: 700; color: #856404;
-        }
-        .status-pending {
-            background: #f8d7da; padding: 4px 14px; border-radius: 20px; font-weight: 700; color: #721c24;
-        }
+    :root {
+        --primary-color: #1E5D2F;
+    }
+    .reportview-container, .stApp {
+        background: #F4F6F7;
+    }
+    h1, h2, h3 {
+        color: #1E5D2F !important; /* Verde Institucional CUN */
+    }
+    div[data-testid="stMetricValue"] {
+        color: #1E5D2F !important;
+    }
+    .stButton>button {
+        background-color: #1E5D2F;
+        color: white;
+    }
     </style>
 """,
     unsafe_allow_html=True,
 )
 
-# ==================== BARRA LATERAL ====================
-with st.sidebar:
-    st.markdown(
-        """
-        <div style="text-align: center; margin-bottom: 30px;">
-            <h2 style="color: #22c55e; font-weight: 900; margin:0;">🎓 CUN</h2>
-            <p style="color: #94a3b8; font-size: 0.8rem; margin:0;">COE · Servicios Digitales</p>
-        </div>
-    """,
-        unsafe_allow_html=True,
+st.title("🎯 Análisis de Objeciones COE - CUN")
+st.markdown("### *Informe de Auditoría y Control de Llamadas Operativas*")
+st.markdown("---")
+
+# Ruta física de tu Excel original en Windows
+RUTA_REAL_EXCEL = r"C:\Users\juan_garnicac\Documents\ProyectosVisual\Ventas\presentaciones\carreras_homologadas.xlsx"
+
+# ==================== 2. TABLA EXPLICATIVA (GLOSARIO REAL DE LLAMADAS) ====================
+glosario_data = {
+    "Categoría de Objeción": [
+        "Económica",
+        "Tiempo/Flexibilidad",
+        "Confianza/Legalidad",
+        "Metodología",
+        "Terceros",
+        "Competencia",
+        "Documentación/Requisitos",
+        "Ubicación/Sedes",
+        "Desinterés/Aplazamiento",
+    ],
+    "Significado Comercial / ¿Qué significa en la llamada?": [
+        "El contacto manifiesta falta de dinero, objeta el costo del semestre o solicita opciones de financiación especiales durante la llamada.",
+        "El contacto reporta cruces de horarios con turnos laborales rotativos, altas cargas en su puesto actual o falta de tiempo disponible durante la llamada.",
+        "El contacto expresa dudas explícitas sobre la validez del título ante el Ministerio de Educación o exige códigos SNIES en la llamada.",
+        "El contacto manifiesta apatía o resistencia abierta al modelo educativo propuesto, problemas técnicos o de conectividad.",
+        "El contacto indica en la llamada que no tiene autonomía para decidir y que debe consultar la decisión económica con familiares o jefes.",
+        "El contacto manifiesta que está evaluando o comparando activamente frente a ofertas y costos de otras instituciones del mercado.",
+        "El contacto reporta en la llamada retrasos en la entrega de requisitos obligatorios (ICFES, actas de grado, certificados de notas).",
+        "El contacto argumenta barrera geográfica por distancia excesiva hacia las sedes físicas o problemas de transporte urbano.",
+        "El contacto solicita voluntariamente aplazar el contacto para periodos futuros o manifiesta desinterés definitivo con la llamada.",
+    ],
+}
+df_glosario = pd.DataFrame(glosario_data)
+
+
+# ==================== 3. CARGA Y LIMPIEZA DE DATOS BASURA ====================
+@st.cache_data
+def cargar_y_limpiar_excel(ruta):
+    if os.path.exists(ruta):
+        data = pd.read_excel(ruta)
+
+        # Convertir fechas si existen
+        if "fecha" in data.columns:
+            data["fecha"] = pd.to_datetime(data["fecha"], errors="coerce")
+
+        # Definición de columnas clave
+        col_prog = "programa_homologado_lista"
+        col_obj = "Objecion_Detectada"
+
+        # Limpieza de nulos iniciales
+        data = data.dropna(subset=[col_prog, col_obj])
+
+        # Volvemos todo string y minúsculas temporalmente para limpiar sin importar cómo venga escrito
+        data[col_prog] = data[col_prog].astype(str).str.strip()
+        data[col_obj] = data[col_obj].astype(str).str.strip()
+
+        # Filtro duro: Eliminamos de raíz cualquier registro que contenga estos textos basura
+        textos_basura = [
+            "otro / por verificar",
+            "otro",
+            "no registrado",
+            "por verificar",
+            "",
+            "nan",
+            "none",
+        ]
+
+        data = data[
+            (~data[col_prog].str.lower().isin(textos_basura))
+            & (~data[col_obj].str.lower().isin(textos_basura))
+        ]
+
+        return data
+    return None
+
+
+df = cargar_y_limpiar_excel(RUTA_REAL_EXCEL)
+
+if df is not None and not df.empty:
+    # Columnas estandarizadas del archivo de llamadas
+    col_programa = "programa_homologado_lista"
+    col_modalidad = "modalidad_limpia"
+    col_ciudad = "ciudad"
+    col_objecion_cat = "Objecion_Detectada"
+
+    # ==================== BARRA LATERAL CON LA OPCIÓN FÍSICA "TODOS" ====================
+    st.sidebar.header("🔍 Filtros de Venta")
+
+    # Filtro 1: Programas Académicos (Ya limpios)
+    lista_programas = sorted(df[col_programa].unique())
+    opciones_prog = ["Todos"] + lista_programas
+    prog_sel_raw = st.sidebar.multiselect(
+        "Filtrar por Programa:", options=opciones_prog, default=["Todos"]
     )
 
-    page = st.radio(
-        label="Navegación",
-        options=[
-            "🏠 Portada",
-            "⚙️ Flujo de Datos y Modelos",
-            "🔴 Errores Identificados",
-            "✅ Conclusiones",
-        ],
-        index=0,
-        label_visibility="collapsed",
+    # Filtro 2: Modalidades
+    lista_modalidades = sorted(df[col_modalidad].dropna().astype(str).unique())
+    opciones_mod = ["Todos"] + lista_modalidades
+    mod_sel_raw = st.sidebar.multiselect(
+        "Filtrar por Modalidad:", options=opciones_mod, default=["Todos"]
     )
 
-    st.sidebar.markdown("---")
-    st.sidebar.caption("👥 Hugo · David S. · Juan")
-    st.sidebar.caption("📌 Presentación para David Barón")
-
-# ==================== PÁGINAS ====================
-
-# ---------- PÁGINA 1: PORTADA ----------
-if page == "🏠 Portada":
-    st.markdown(
-        '<div class="main-title">📞 Sistema de Evaluación de Llamadas y Chats</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown("### *De la escucha reactiva al coaching predictivo*")
-    st.markdown("---")
-
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        st.markdown(
-            """
-            <div class="card-cun" style="border-left-color: #0f172a;">
-                <h3>🎯 El Problema que Resolvemos</h3>
-                <ul>
-                    <li><strong>Escala</strong>: No podemos escuchar el 100% de las llamadas manualmente.</li>
-                    <li><strong>Objetividad</strong>: No tenemos métricas estandarizadas sobre los 7 pilares estratégicos.</li>
-                    <li><strong>Capacitación</strong>: La retroalimentación a agentes se basa en corazonadas, no en datos masivos.</li>
-                </ul>
-            </div>
-            <div class="card-cun" style="border-left-color: #22c55e; margin-top: 1.5rem;">
-                <h3>💡 La Solución</h3>
-                <p>Un sistema de <strong>4 modelos de Machine Learning</strong> que analiza el 100% de las interacciones, convierte el audio en datos accionables y se retroalimenta con el criterio humano de los coordinadores.</p>
-            </div>
-            <div style="background: #f1f5f9; padding: 1.5rem; border-radius: 12px; margin-top: 1.5rem;">
-                <h4 style="color: #0f172a;">🔄 Círculo Virtuoso</h4>
-                <p style="font-size: 0.95rem; color: #334155;">
-                <strong>Máquina califica</strong> → <strong>Coordinador revisa</strong> → <strong>Corrección humana</strong> → <strong>Data Science reentrena</strong> → <strong>Modelo mejora</strong> → <strong>Agentes venden más</strong>
-                </p>
-            </div>
-        """,
-            unsafe_allow_html=True,
-        )
-
-    with col2:
-        st.markdown(
-            """
-            <div class="card-dark">
-                <h3>👥 Equipo Proyecto</h3>
-                <p><strong>Hugo Alberto Bernal</strong><br>COE - Servicios Digitales</p>
-                <p><strong>David Santiago Cerón</strong><br>COE - Servicios Digitales</p>
-                <p><strong>Juan Francisco Garnica</strong><br>COE - Servicios Digitales</p>
-                <hr style="border-color: #1e293b;">
-                <p style="font-size: 0.85rem; color: #94a3b8;">Presentación para <strong style="color:white;">David Barón</strong></p>
-            </div>
-        """,
-            unsafe_allow_html=True,
-        )
-
-# ---------- PÁGINA 2: FLUJO DE DATOS Y MODELOS ----------
-elif page == "⚙️ Flujo de Datos y Modelos":
-    st.markdown(
-        '<div class="main-title">⚙️ Flujo de Datos y Modelos</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown("### El viaje de los datos: Desde el audio hasta el análisis")
-    st.markdown("---")
-
-    col1, col2, col3, col4, col5 = st.columns(5)
-    with col1:
-        st.markdown(
-            """
-            <div style="background:#0f172a; color:white; padding:20px; border-radius:12px; text-align:center; height:120px;">
-                <div style="font-size:2.5rem;">📞</div>
-                <strong>Five9</strong><br><span style="font-size:0.7rem;">Audio de llamadas</span>
-            </div>
-        """,
-            unsafe_allow_html=True,
-        )
-    with col2:
-        st.markdown(
-            """
-            <div style="display:flex; align-items:center; justify-content:center; height:120px; font-size:3rem; color:#22c55e;">➡️</div>
-        """,
-            unsafe_allow_html=True,
-        )
-    with col3:
-        st.markdown(
-            """
-            <div style="background:#0f172a; color:white; padding:20px; border-radius:12px; text-align:center; height:120px;">
-                <div style="font-size:2.5rem;">🎙️</div>
-                <strong>Whisper</strong><br><span style="font-size:0.7rem;">Audio → Texto JSON</span>
-            </div>
-        """,
-            unsafe_allow_html=True,
-        )
-    with col4:
-        st.markdown(
-            """
-            <div style="display:flex; align-items:center; justify-content:center; height:120px; font-size:3rem; color:#22c55e;">➡️</div>
-        """,
-            unsafe_allow_html=True,
-        )
-    with col5:
-        st.markdown(
-            """
-            <div style="background:#22c55e; color:white; padding:20px; border-radius:12px; text-align:center; height:120px;">
-                <div style="font-size:2.5rem;">🧠</div>
-                <strong>4 Modelos</strong><br><span style="font-size:0.7rem;">Análisis completo</span>
-            </div>
-        """,
-            unsafe_allow_html=True,
-        )
-
-    st.markdown("---")
-    st.markdown("#### 🔍 Detalle Técnico (STT)")
-    st.markdown(
-        """
-        - **Motor**: *Whisper Large V3* (OpenAI). Alta precisión en acentos latinos y jerga técnica.
-        - **Salida**: Texto plano con marca de tiempo por cada frase, ID de agente, duración y resultado de venta (Sí/No).
-    """
+    # Filtro 3: Ciudades
+    lista_ciudades = sorted(df[col_ciudad].dropna().astype(str).unique())
+    opciones_ciu = ["Todos"] + lista_ciudades
+    ciu_sel_raw = st.sidebar.multiselect(
+        "Filtrar por Ciudad:", options=opciones_ciu, default=["Todos"]
     )
 
-    with st.expander("📝 Ejemplo de Transcripción (Mockup)"):
-        st.code(
-            """
-        [00:00:15] Agente: Hola, ¿cómo estás? Te llamo para contarte sobre nuestra beca del 40%.
-        [00:00:28] Cliente: Me interesa, pero he visto que la otra universidad tiene más programas virtuales.
-        [00:00:45] Agente: Entiendo. Déjame contarte que nuestros convenios internacionales nos respaldan...
-        """,
-            language="text",
-        )
+    # Lógica de asignación para la opción "Todos"
+    prog_sel = (
+        lista_programas if "Todos" in prog_sel_raw or not prog_sel_raw else prog_sel_raw
+    )
+    mod_sel = (
+        lista_modalidades if "Todos" in mod_sel_raw or not mod_sel_raw else mod_sel_raw
+    )
+    ciu_sel = (
+        lista_ciudades if "Todos" in ciu_sel_raw or not ciu_sel_raw else ciu_sel_raw
+    )
 
-    st.markdown("---")
-    st.markdown('<div class="section-title">🧠 Los 4 Modelos</div>', unsafe_allow_html=True)
-
-    pilares = [
-        "P1: Promesa",
-        "P2: Beneficio",
-        "P3: Respaldo",
-        "P4: Beca",
-        "P5: Diferenciación",
-        "P6: Urgencia",
-        "P7: Cierre",
+    # Filtrado final enfocado únicamente en los cruces reales analizados
+    df_filtrado = df[
+        (df[col_programa].isin(prog_sel))
+        & (df[col_modalidad].isin(mod_sel))
+        & (df[col_ciudad].isin(ciu_sel))
     ]
 
-    col1, col2 = st.columns(2)
+    # PROCESAMIENTO EXCLUSIVO DE DATOS VALIDADOS
+    if not df_filtrado.empty:
 
-    with col1:
-        st.markdown(
-            """
-            <div class="card-cun">
-                <h3>🏛️ Modelo 1: Estratégico (VSM)</h3>
-                <p><em>Vector Space Model - Similitud semántica</em></p>
-                <p>Representa los 7 pilares como vectores y calcula la similitud coseno con la transcripción.</p>
-            </div>
-        """,
-            unsafe_allow_html=True,
-        )
-        valores = [85, 45, 90, 30, 70, 95, 60]
-        fig = go.Figure(
-            data=go.Scatterpolar(
-                r=valores,
-                theta=pilares,
-                fill="toself",
-                marker=dict(color="#22c55e"),
-                line=dict(color="#15803d", width=2),
+        # Rango de fechas dinámico sobre lo que cruzó
+        if "fecha" in df_filtrado.columns:
+            fecha_min = df_filtrado["fecha"].min()
+            fecha_max = df_filtrado["fecha"].max()
+            if pd.notna(fecha_min) and pd.notna(fecha_max):
+                rango_fechas_str = f"{fecha_min.strftime('%d/%m/%Y')} al {fecha_max.strftime('%d/%m/%Y')}"
+            else:
+                rango_fechas_str = "Filtro Dinámico Cruzado"
+        else:
+            rango_fechas_str = "Filtro Dinámico Cruzado"
+
+        # ==================== TARJETAS DE INDICADORES (MÉTRICAS DEL CRUCE REAL) ====================
+        total_llamadas_filtradas = len(df_filtrado)
+        total_universo_llamadas = 144000  # Universo base operativo
+        porcentaje_penetracion = (
+            total_llamadas_filtradas / total_universo_llamadas
+        ) * 100
+        total_categorias = df_filtrado[col_objecion_cat].nunique()
+
+        st.markdown("#### Resumen Ejecutivo General")
+        kpi_top1, kpi_top2, kpi_top3 = st.columns(3)
+        with kpi_top1:
+            st.metric(
+                label="📊 Llamadas Analizadas con Filtro",
+                value=f"{total_llamadas_filtradas:,}",
             )
+        with kpi_top2:
+            st.metric(
+                label="📞 Universo Total Operativo",
+                value=f"{total_universo_llamadas:,}",
+            )
+        with kpi_top3:
+            st.metric(label="📅 Rango de Fechas Evaluado", value=rango_fechas_str)
+
+        kpi_bot1, kpi_bot2 = st.columns(2)
+        with kpi_bot1:
+            st.metric(
+                label="📉 Tasa de Penetración de Análisis",
+                value=f"{porcentaje_penetracion:.2f}%",
+            )
+        with kpi_bot2:
+            st.metric(label="⚠️ Tipos de Objeción en Sala", value=total_categorias)
+
+        st.markdown("---")
+
+        # ==================== GRÁFICA INTERACTIVA HORIZONTAL (ANCHO COMPLETO Y COMPLETAMENTE LIMPIA) ====================
+        st.subheader("📈 Top 10 Programas Académicos con Mayor Objecion en Llamadas")
+
+        top_programas = df_filtrado[col_programa].value_counts().head(10).reset_index()
+        top_programas.columns = ["Nombre del Programa", "Cantidad de Llamadas"]
+
+        # Gráfica horizontal interactiva con Plotly Express
+        fig = px.bar(
+            top_programas,
+            x="Cantidad de Llamadas",
+            y="Nombre del Programa",
+            orientation="h",
+            color="Cantidad de Llamadas",
+            color_continuous_scale=["#1E5D2F", "#1E5D2F"],
         )
+
         fig.update_layout(
-            polar=dict(
-                radialaxis=dict(visible=True, range=[0, 100], color="#64748b"),
-                angularaxis=dict(tickfont=dict(size=10, color="#0f172a")),
-            ),
+            yaxis={"categoryorder": "total ascending"},
+            margin=dict(
+                l=320, r=20, t=20, b=20
+            ),  # 320px fijos a la izquierda para que quepa todo el texto
+            height=600,
             showlegend=False,
-            height=350,
-            margin=dict(l=30, r=30, t=30, b=30),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
+            coloraxis_showscale=False,
         )
+
         st.plotly_chart(fig, use_container_width=True)
-        st.markdown(
-            '<span class="badge-neg">🔴 Alerta: Pilares 2 (Beneficio) y 4 (Beca) por debajo del umbral</span>',
-            unsafe_allow_html=True,
-        )
 
-    with col2:
-        st.markdown(
-            """
-            <div class="card-cun">
-                <h3>🤝 Modelo 2: Confianza (Teorema de Bayes)</h3>
-                <p><em>Clasificador probabilístico de polaridad</em></p>
-                <p>Estima P(Positivo|texto) y P(Negativo|texto) usando frecuencias de palabras.</p>
-            </div>
-        """,
-            unsafe_allow_html=True,
-        )
-        fig = go.Figure(
-            go.Indicator(
-                mode="gauge+number",
-                value=85,
-                title={
-                    "text": "Probabilidad de Sentimiento NEGATIVO",
-                    "font": {"size": 14},
-                },
-                domain={"x": [0, 1], "y": [0, 1]},
-                gauge={
-                    "axis": {"range": [0, 100], "tickfont": {"color": "#0f172a"}},
-                    "bar": {"color": "#dc3545"},
-                    "steps": [
-                        {"range": [0, 40], "color": "#d4edda"},
-                        {"range": [40, 70], "color": "#fff3cd"},
-                        {"range": [70, 100], "color": "#f8d7da"},
-                    ],
-                    "threshold": {
-                        "line": {"color": "#0f172a", "width": 4},
-                        "thickness": 0.75,
-                        "value": 85,
-                    },
-                },
-            )
-        )
-        fig.update_layout(
-            height=350,
-            margin=dict(l=20, r=20, t=30, b=20),
-            paper_bgcolor="rgba(0,0,0,0)",
-        )
-        st.plotly_chart(fig, use_container_width=True)
-        st.markdown(
-            '<span class="badge-pos">📊 Confianza del clasificador: 92% (Margen alto)</span>',
-            unsafe_allow_html=True,
-        )
+        st.markdown("---")
 
-    col3, col4 = st.columns(2)
+        # ==================== DISTRIBUCIÓN DE OBJECIONES REALES ====================
+        st.subheader("🛑 Distribución del Motivo de Pérdida en Llamadas")
+        top_objeciones = df_filtrado[col_objecion_cat].value_counts().reset_index()
+        top_objeciones.columns = ["Categoría de Objeción", "Volumen de Llamadas"]
+        st.dataframe(top_objeciones, use_container_width=True, hide_index=True)
 
-    with col3:
-        st.markdown(
-            """
-            <div class="card-cun" style="border-left-color: #ffc107;">
-                <h3>🔍 Modelo 3: Identificación</h3>
-                <p><em>Diccionario comparativo de palabras clave</em></p>
-                <p>Detecta entidades específicas (referidos, empresas, convenios) mediante patrones y reglas.</p>
-            </div>
-        """,
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            """
-            <div style="background: #f1f5f9; padding: 15px; border-radius: 12px;">
-                <span style="background: #22c55e; color: white; padding: 5px 14px; border-radius: 20px; margin: 4px; display: inline-block;">🏢 Convenio: Empresa X</span>
-                <span style="background: #0f172a; color: white; padding: 5px 14px; border-radius: 20px; margin: 4px; display: inline-block;">👤 Referido: María G.</span>
-                <span style="background: #dc3545; color: white; padding: 5px 14px; border-radius: 20px; margin: 4px; display: inline-block;">🏫 Competencia: Universidad Y</span>
-                <span style="background: #ffc107; color: #0f172a; padding: 5px 14px; border-radius: 20px; margin: 4px; display: inline-block;">🎓 Beca Académica</span>
-            </div>
-        """,
-            unsafe_allow_html=True,
-        )
-        st.caption(
-            "La minería de reglas permite ajustar el diccionario sin reentrenar el modelo."
-        )
+        st.markdown("---")
 
-    with col4:
-        st.markdown(
-            """
-            <div class="card-cun" style="border-left-color: #ffc107;">
-                <h3>📋 Modelo 4: Protocolo</h3>
-                <p><em>Diccionario de objeciones + Adherencia al script</em></p>
-                <p>Clasifica la objeción principal en 9 categorías y mide si el agente siguió el flujo esperado.</p>
-            </div>
-        """,
-            unsafe_allow_html=True,
-        )
-        col_a, col_b = st.columns([3, 1])
-        with col_a:
-            st.progress(70, text="Adherencia al Script")
-        with col_b:
-            st.markdown(
-                '<span class="badge-cun">🏷️ Económica</span>', unsafe_allow_html=True
+        # ==================== 4. SECCIÓN: INSIGHTS TEXTUALES DEL CRUCE DE LLAMADAS ====================
+        st.subheader("💡 Insights Operativos del Cruce de Llamadas")
+
+        if not top_objeciones.empty:
+            mayor_objecion = top_objeciones.iloc[0]["Categoría de Objeción"]
+            cantidad_mayor = top_objeciones.iloc[0]["Volumen de Llamadas"]
+            porcentaje_sobre_caidas = (cantidad_mayor / total_llamadas_filtradas) * 100
+
+            df_mayor_obj = df_filtrado[df_filtrado[col_objecion_cat] == mayor_objecion]
+            prog_afectado = (
+                df_mayor_obj[col_programa].value_counts().idxmax()
+                if not df_mayor_obj.empty
+                else "N/A"
             )
 
-        with st.expander("📌 Ver 9 Categorías de Objeción"):
-            st.markdown(
-                """
-            1. Económica / Costo  
-            2. Falta de Tiempo  
-            3. Competencia (otra universidad)  
-            4. Desconfianza en la calidad  
-            5. Indecisión / Necesito pensarlo  
-            6. Distancia / Ubicación  
-            7. Familiar / Apoyo familiar  
-            8. Académica (programa no encaja)  
-            9. Genérica / Otra
-            """
-            )
+            if mayor_objecion == "Tiempo/Flexibilidad":
+                recomendacion_comercial = "Se requiere evaluar estrategias de flexibilización horaria, promoción activa de la modal virtual o reestructuración de los speechs de seguimiento."
+            elif mayor_objecion == "Económica":
+                recomendacion_comercial = "Se requiere articulación con el área de cartera o convenios de financiación para mitigar la deserción telefónica."
+            else:
+                recomendacion_comercial = "Se requiere revisar las mallas curriculares del programa afectado o capacitar a los asesores de la sala."
 
-# ---------- PÁGINA 3: ERRORES IDENTIFICADOS ----------
-elif page == "🔴 Errores Identificados":
-    st.markdown(
-        '<div class="main-title">🔴 Errores Identificados y Soluciones</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown("### *Análisis de los principales hallazgos en el proceso*")
-    st.markdown("---")
+            col_ins1, col_ins2 = st.columns(2)
+            with col_ins1:
+                st.markdown(f"""
+                ### **Análisis de Barreras Críticas en Sala**
+                * 🔴 **Principal obstáculo detectado:** La categoría de objeción **'{mayor_objecion}'** es el motivo número uno por el cual fracasan los closures telefónicos, acumulando un volumen de **{cantidad_mayor:,} llamadas** (un **{porcentaje_sobre_caidas:.1f}%** de las llamadas analizadas).
+                * 🎓 **Programa académico de la CUN más afectado:** El programa académico con mayor vulnerabilidad es **{prog_afectado}**. *{recomendacion_comercial}*
+                """)
+            with col_ins2:
+                st.markdown(f"""
+                ### **Métricas Operativas del COE**
+                * 📞 **Volumen de Esfuerzo:** Sobre el universo base de **{total_universo_llamadas:,} llamadas**, el cruce actual consolida **{total_llamadas_filtradas:,} llamadas** analizadas en los registros reales.
+                * 📉 **Tasa de Penetración del Análisis:** El porcentaje de llamadas procesadas respecto al volumen total se ubica en el **{porcentaje_penetracion:.2f}%**.
+                """)
 
-    # Error 1
-    st.markdown(
-        """
-        <div class="error-card">
-            <h4>❌ Error 1: Cédulas vacías en COE.venta_contact_nuevo</h4>
-            <p><strong>Problema:</strong> El campo <code>Cedula</code> queda como <code>'N/A'</code> porque el asesor no tiene cédula registrada en Kactus al momento del procesamiento.</p>
-            <p><strong>Solución bidireccional:</strong></p>
-            <ul>
-                <li><strong>Hacia atrás</strong> (actualización histórica):</li>
-            </ul>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.code(
-        """
-        UPDATE COE.venta_contact_nuevo
-        SET Cedula = ?, Asesor = ?
-        WHERE Correo = ? AND Fecha = ? AND Hora_Llamada = ? AND Cedula = 'N/A'
-        """,
-        language="sql",
-    )
-    st.markdown(
-        """
-        <ul>
-            <li><strong>Hacia adelante</strong>: El script ya consulta Kactus y asigna la cédula correcta desde el inicio.</li>
-        </ul>
-        <p><span class="status-solved">✅ ESTADO: SOLUCIONADO</span></p>
-        <p><strong>Acciones realizadas:</strong> Las cédulas se actualizan correctamente en ambos sentidos. Los nuevos registros ya llegan con cédula.</p>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.markdown("---")
+        st.markdown("---")
 
-    # Error 2
-    st.markdown(
-        """
-        <div class="error-card">
-            <h4>❌ Error 2: Nulos en columna <code>fuente</code> de la tabla de chats</h4>
-            <p><strong>Problema:</strong> La tabla <code>[ZOHO].[CRM].[Transcripciones_de_chat]</code> tiene registros con <code>fuente</code> NULL, 'NULL' (string) o vacío, lo que impide saber el origen del chat.</p>
-            <p><strong>Consulta de detección:</strong></p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.code(
-        """
-        SELECT Visitor_phone_number, fuente
-        FROM [ZOHO].[CRM].[Transcripciones_de_chat]
-        WHERE fuente IS NULL
-           OR UPPER(LTRIM(RTRIM(fuente))) = 'NULL'
-           OR LTRIM(RTRIM(fuente)) = '';
-        """,
-        language="sql",
-    )
-    st.markdown(
-        """
-        <p><strong>Resultado:</strong> Se encontraron registros sin fuente.</p>
-        <p><strong>Solución propuesta:</strong></p>
-        <ul>
-            <li>Revisar el proceso de captura de chats en ZOHO para garantizar que siempre se registre la fuente (web, WhatsApp, Facebook, etc.).</li>
-            <li>Mientras tanto, etiquetar estos registros como "Fuente desconocida" en los reportes.</li>
-        </ul>
-        <p><span class="status-progress">🟡 ESTADO: EN PROCESO</span></p>
-        <p><strong>Acciones en curso:</strong></p>
-        <ul>
-            <li>Se agenda reunión con <strong>Analista de Calidad • Servicio</strong> para evaluar si es posible rastrear los nulos y determinar su origen.</li>
-            <li>Por ahora, estos registros no se mostrarán en el tablero para evitar distorsiones.</li>
-        </ul>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.markdown("---")
+        # ==================== 5. SECCIÓN: TABLA GLOSARIO EXPLICATIVO FIJO ====================
+        st.subheader("📖 Glosario Técnico: Definición de Objeciones en Sala")
+        st.markdown(
+            "Matriz conceptual fija utilizada para estandarizar la tipificación y auditoría de llamadas dentro del COE de la CUN:"
+        )
+        st.table(df_glosario)
 
-    # Error 3
-    st.markdown(
-        """
-        <div class="error-card">
-            <h4>❌ Error 3: Correos de asesores con cargos no comerciales</h4>
-            <p><strong>Problema:</strong> En <code>COE.venta_contact_nuevo</code> hay registros de asesores con cargos que no están directamente relacionados con la venta (auxiliares de vinculaciones, rematrícula, cartera, etc.), distorsionando los indicadores.</p>
-            <p><strong>Consulta de detección:</strong></p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.code(
-        """
-        SELECT
-            h.CARGO,
-            COUNT(*) AS Cantidad
-        FROM COE.venta_contact_nuevo v
-        LEFT JOIN kactus.historico_contratos h
-            ON UPPER(LTRIM(RTRIM(v.Correo))) = UPPER(LTRIM(RTRIM(h.EMAIL_INSTITUCIONAL)))
-        WHERE v.Fecha BETWEEN '2026-01-01' AND CAST(GETDATE() AS DATE)
-        GROUP BY h.CARGO
-        ORDER BY Cantidad DESC;
-        """,
-        language="sql",
-    )
-    st.markdown(
-        """
-        <p><strong>Resultados obtenidos:</strong></p>
-        """,
-        unsafe_allow_html=True,
-    )
-    data_cargos = {
-        "CARGO": [
-            "AUXILIAR GESTOR VINCULACIONES",
-            "AUXILIAR GESTOR REMATRICULA",
-            "AUXILIAR GESTOR DE CARTERA",
-            "GESTOR DE VINCULACIONES",
-            "ASESOR CONTACT CENTER",
-            "DOC AUX T&T/V/TC/IDIOMAS/PROYECTOS ACADE",
-            "AUXILIAR GESTOR DE PERMANENCIA",
-            "NULL",
-            "AUXILIAR VINCULACIONES BE",
-            "DIRECTOR SERVICIOS DIGITALES",
-            "ARTICULADOR ESTRATEGICO DE PLANEACION",
-            "APRENDIZ",
-            "ESPECIALISTA DE ANALITICA",
-            "AUXILIAR GESTOR ESTABILIDAD",
-            "CATALIZADOR FORMACION INTERNA",
-            "MENTOR",
-            "ANALISTA DATA MARSHALL",
-        ],
-        "Cantidad": [
-            277514, 32308, 18821, 6426, 3850, 1930, 1772, 169, 73, 48, 18, 8, 8, 8, 7, 2, 1
-        ]
-    }
-    df_cargos = pd.DataFrame(data_cargos)
-    st.dataframe(df_cargos, use_container_width=True)
+    else:
+        st.warning(
+            "⚠️ No existen llamadas reales con datos comerciales válidos para los filtros seleccionados."
+        )
 
-    st.markdown(
-        """
-        <p><strong>Solución propuesta:</strong></p>
-        <ol>
-            <li><strong>Filtrar del análisis</strong> todos los cargos que no tengan relación directa con la venta (cargos administrativos, docentes, directivos, aprendices, etc.).</li>
-            <li><strong>Crear un modelo exclusivo para REMATRICULA</strong>, ya que este proceso tiene condiciones y métricas diferentes a la venta de primer contacto.</li>
-        </ol>
-        <p><span class="status-progress">🟡 ESTADO: EN PROCESO</span></p>
-        <p><strong>Acciones en curso:</strong></p>
-        <ul>
-            <li>Se inicia la limpieza de cargos: se identifican y depuran los que no corresponden a ventas de entrada.</li>
-            <li>Consulta de referencia para revisar la tabla filtrada:</li>
-        </ul>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.code(
-        """
-        SELECT * FROM COE.venta_contact_nuevo
-        WHERE CARGO IN ('ASESOR CONTACT CENTER', 'GESTOR DE VINCULACIONES', ...)  -- cargos comerciales
-        """,
-        language="sql",
-    )
-    st.markdown(
-        """
-        <ul>
-            <li>Se está diseñando la bandera para detectar REMATRICULA por palabras clave.</li>
-        </ul>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown("---")
-    st.markdown('<div class="section-title">🎯 Propuesta: Modelo Exclusivo para REMATRÍCULA</div>', unsafe_allow_html=True)
-
-    st.markdown(
-        """
-        <div class="card-cun" style="border-left-color: #ffc107;">
-            <p><strong>Justificación:</strong> REMATRICULA tiene condiciones y métricas diferentes a la venta de primer contacto.</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    data_comparativa = {
-        "Aspecto": [
-            "Pilares evaluados",
-            "Métricas",
-            "CALIFICACIÓN TOTAL",
-            "Objeción principal"
-        ],
-        "Modelo actual (ventas)": [
-            "P1-P7 (promesa, beneficio, entregables, garantía, regalos, precio, cierre)",
-            "M1 (estratégico), M2 (confianza), M3 (identificación), M4 (protocolo)",
-            "60% M1 + 15% M2 + 15% M3 + 10% M4",
-            "Económica, tiempo, competencia, etc."
-        ],
-        "Modelo REMATRICULA": [
-            "Fidelización, Satisfacción previa, Disponibilidad de cupos, Facilidades de pago, Cierre de matrícula",
-            "M2 (confianza), M4 (protocolo), M5 (historial académico), M6 (gestión de documentos)",
-            "40% Fidelización + 20% Satisfacción + 20% Cupos + 20% Pago",
-            "Carga académica, Horarios, Costo, Trámites pendientes"
-        ]
-    }
-    df_comparativa = pd.DataFrame(data_comparativa)
-    st.table(df_comparativa)
-
-    st.markdown(
-        """
-        <p><strong>Implementación:</strong></p>
-        <ul>
-            <li>Bandera para detectar REMATRICULA (por cargo o palabras clave: "rematrícula", "continuar", "siguiente semestre").</li>
-            <li>Resultados en misma tabla con campo <code>Tipo_Proceso</code> ('Venta' o 'Rematricula').</li>
-        </ul>
-        <p><strong>Beneficio:</strong> Indicadores más precisos para cada tipo de gestión.</p>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown("---")
-    st.markdown(
-        """
-        <div style="background: #e2e8f0; padding: 1.5rem; border-radius: 12px;">
-            <h4 style="color: #0f172a;">📌 Resumen de Estados</h4>
-            <ul>
-                <li><span class="status-solved">✅ SOLUCIONADO</span> Cédulas vacías</li>
-                <li><span class="status-progress">🟡 EN PROCESO</span> Nulos en fuente (reunión con Analista de Calidad)</li>
-                <li><span class="status-progress">🟡 EN PROCESO</span> Limpieza de cargos y modelo REMATRICULA</li>
-            </ul>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-# ---------- PÁGINA 4: CONCLUSIONES ----------
 else:
-    st.markdown(
-        '<div class="main-title">✅ Conclusiones y Análisis de Resultados</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown("### *Análisis de indicadores clave - Enero a Junio 2026*")
-    st.markdown("---")
-
-    # Datos de la tabla con análisis recortados a máximo 10 palabras
-    data_conclusiones = {
-        "Indicador": ["Promesa", "Beneficio", "Garantía", "Regalos", "Precio", "Cierre"],
-        "Promedio": ["43.54%", "51.34%", "48.86%", "36.37%", "41.94%", "51.63%"],
-        "Tendencia": ["➖ Estable", "⬇️ Descendente", "➖ Estable", "⬇️ Leve", "➖ Estable", "⬇️ Descendente"],
-        "Análisis": [
-            "Se mantiene en 43-44%. Sin variación.",
-            "Baja de 52.7% a 50.07%. Cae 2.63%.",
-            "Uniforme cerca del 49%. Mejora calidad.",
-            "El más bajo del semestre. Estable.",
-            "Constante alrededor del 42%.",
-            "El más alto. Baja 1.5%.",
-        ]
-    }
-    df_conclusiones = pd.DataFrame(data_conclusiones)
-
-    # Mostrar tabla con estilo mejorado
-    st.dataframe(
-        df_conclusiones,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "Indicador": st.column_config.TextColumn("Indicador", width="small"),
-            "Promedio": st.column_config.TextColumn("Promedio", width="small"),
-            "Tendencia": st.column_config.TextColumn("Tendencia", width="small"),
-            "Análisis": st.column_config.TextColumn("Análisis", width="large"),
-        }
-    )
-
-    st.markdown("---")
-    st.markdown("### 📊 Resumen de Hallazgos")
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.markdown(
-            """
-            <div style="background: #dc3545; color: white; padding: 1.2rem; border-radius: 12px; text-align: center;">
-                <div style="font-size: 1.8rem; font-weight: 900;">36.37%</div>
-                <div style="font-size: 0.9rem;">🔴 <strong>Regalos</strong> (más bajo)</div>
-                <div style="font-size: 0.8rem; margin-top: 5px;">Oportunidad de mejora clara</div>
-            </div>
-        """,
-            unsafe_allow_html=True,
-        )
-    with col2:
-        st.markdown(
-            """
-            <div style="background: #ffc107; color: #0f172a; padding: 1.2rem; border-radius: 12px; text-align: center;">
-                <div style="font-size: 1.8rem; font-weight: 900;">-2.63 p.p.</div>
-                <div style="font-size: 0.9rem;">🟡 <strong>Beneficio</strong> (más descendente)</div>
-                <div style="font-size: 0.8rem; margin-top: 5px;">Caída más pronunciada</div>
-            </div>
-        """,
-            unsafe_allow_html=True,
-        )
-    with col3:
-        st.markdown(
-            """
-            <div style="background: #22c55e; color: white; padding: 1.2rem; border-radius: 12px; text-align: center;">
-                <div style="font-size: 1.8rem; font-weight: 900;">51.63%</div>
-                <div style="font-size: 0.9rem;">🟢 <strong>Cierre</strong> (más alto)</div>
-                <div style="font-size: 0.8rem; margin-top: 5px;">Aunque está descendiendo</div>
-            </div>
-        """,
-            unsafe_allow_html=True,
-        )
-
-    st.markdown("---")
-    st.markdown("### 🎯 Acciones Recomendadas")
-
-    st.markdown(
-        """
-        <div style="background: #f1f5f9; padding: 1.5rem; border-radius: 12px;">
-            <ul>
-                <li><strong>Beneficio (↓ 2.63 p.p.)</strong>: Reforzar capacitación en comunicación de beneficios y ventajas del programa.</li>
-                <li><strong>Regalos (36.37%)</strong>: Implementar estrategias para destacar bonos, descuentos y beneficios extra durante la llamada.</li>
-                <li><strong>Cierre (↓)</strong>: Alinear la estrategia de cierre con la comunicación de beneficios para recuperar efectividad.</li>
-                <li><strong>Promesa, Garantía y Precio</strong>: Mantener la consistencia y buscar pequeñas mejoras para elevar el promedio general.</li>
-            </ul>
-            <p style="margin-top: 1rem;"><strong>Conclusión general:</strong> El semestre muestra fortalezas en Cierre y Garantía, pero oportunidades claras en Beneficio y Regalos. Se recomienda un plan de acción focalizado para revertir las tendencias negativas.</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown("---")
-    st.markdown(
-        """
-        <div style="text-align: center; padding: 1.5rem; background: #0f172a; border-radius: 12px; color: white;">
-            <p style="font-size: 1.2rem; font-weight: 700; margin: 0;">
-                De la escucha reactiva al coaching predictivo, impulsado por datos y retroalimentación humana.
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    st.error(
+        f"❌ El archivo Excel no contiene datos válidos o no se detectó en la ruta: `{RUTA_REAL_EXCEL}`."
     )
