@@ -175,7 +175,7 @@ if df is not None and not df.empty:
 
         # ==================== BALANCES MÉTRICOS ====================
         total_llamadas_filtradas = len(df_filtrado)
-        total_universo_llamadas = 144000
+        total_universo_llamadas = 104000
         porcentaje_penetracion = (total_llamadas_filtradas / total_universo_llamadas) * 100
         total_categorias = df_filtrado[col_objecion_cat].nunique()
 
