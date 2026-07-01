@@ -16,25 +16,21 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    /* Variables globales */
     :root {
         --primary-color: #1E5D2F;
         --bg-color: #F4F6F7;
     }
     
-    /* Fondo de la app */
     .stApp {
         background-color: var(--bg-color);
     }
     
-    /* Estilos de títulos institucionales */
     h1, h2, h3, h4 {
         color: #1E5D2F !important;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         font-weight: 700;
     }
     
-    /* Formateo de Tarjetas KPI */
     div[data-testid="stMetricValue"] {
         color: #1E5D2F !important;
         font-weight: bold;
@@ -46,7 +42,6 @@ st.markdown(
         font-size: 0.95rem !important;
     }
 
-    /* Contenedor estilizado para Insights con efecto Hover */
     .insight-card {
         background-color: #FFFFFF;
         padding: 20px;
@@ -61,7 +56,20 @@ st.markdown(
         box-shadow: 0 8px 15px rgba(30, 93, 47, 0.15);
     }
 
-    /* Estilización del Glosario HTML */
+    .insight-card-pct {
+        background-color: #FFFFFF;
+        padding: 20px;
+        border-radius: 10px;
+        border-left: 5px solid #3182CE;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+        margin-bottom: 15px;
+    }
+    .insight-card-pct:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 15px rgba(49, 130, 206, 0.15);
+    }
+
     .glosario-tabla {
         width: 100%;
         border-collapse: collapse;
@@ -96,7 +104,6 @@ st.title("🎯 Análisis de Objeciones COE - CUN")
 st.markdown("### *Informe de Auditoría y Control de Llamadas Operativas*")
 st.markdown("---")
 
-# Ruta relativa corregida para GitHub/Streamlit Cloud
 RUTA_REAL_EXCEL = "carreras_homologadas_1.xlsx"
 
 # ==================== 2. DATA DEL GLOSARIO REAL DE LLAMADAS ====================
@@ -144,7 +151,7 @@ if df is not None and not df.empty:
     col_ciudad = "ciudad"
     col_objecion_cat = "Objecion_Detectada"
 
-    # ==================== BARRA LATERAL CON LA OPCIÓN FÍSICA "TODOS" ====================
+    # ==================== BARRA LATERAL CON FILTROS ====================
     st.sidebar.header("🔍 Filtros de Venta")
 
     lista_programas = sorted(df[col_programa].unique())
@@ -177,7 +184,7 @@ if df is not None and not df.empty:
         else:
             rango_fechas_str = "Filtro Dinámico"
 
-        # ==================== TARJETAS DE INDICADORES ====================
+        # ==================== TARJETAS DE INDICADORES GENERALES ====================
         total_llamadas_filtradas = len(df_filtrado)
         total_universo_llamadas = 144000
         porcentaje_penetracion = (total_llamadas_filtradas / total_universo_llamadas) * 100
@@ -200,8 +207,8 @@ if df is not None and not df.empty:
 
         st.markdown("---")
 
-        # ==================== GRÁFICA ENFOQUE TOTAL EN OBJECIONES (VERDES CUN) ====================
-        st.subheader("📈 Ranking Global de Objeciones y Programas Afectados")
+        # ==================== SECCIÓN DE VOLÚMENES ABSOLUTOS ====================
+        st.subheader("📊 Análisis General por Volúmenes Absolutos (Cantidad Directa)")
         
         df_obj_totales = df_filtrado[col_objecion_cat].value_counts().reset_index()
         df_obj_totales.columns = ["Tipo de Objeción", "Total"]
@@ -209,10 +216,9 @@ if df is not None and not df.empty:
         df_desglose = df_filtrado.groupby([col_objecion_cat, col_programa]).size().reset_index(name="Cantidad de Llamadas")
         df_desglose.columns = ["Tipo de Objeción", "Programa Académico", "Cantidad de Llamadas"]
 
-        # Paleta de degradados exclusivamente basada en el verde institucional de la CUN (#1E5D2F)
         cun_green_scale = ["#E8F5E9", "#C8E6C9", "#A5D6A7", "#81C784", "#66BB6A", "#4CAF50", "#43A047", "#388E3C", "#2E7D32", "#1E5D2F"]
 
-        fig = px.bar(
+        fig_abs = px.bar(
             df_desglose,
             x="Cantidad de Llamadas",
             y="Tipo de Objeción",
@@ -221,63 +227,54 @@ if df is not None and not df.empty:
             color_discrete_sequence=cun_green_scale,
             category_orders={"Tipo de Objeción": df_obj_totales["Tipo de Objeción"].tolist()}
         )
-
-        fig.update_layout(
+        fig_abs.update_layout(
             yaxis={"categoryorder": "total ascending"},
             margin=dict(l=220, r=20, t=20, b=20),
-            height=550,
+            height=500,
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
             legend=dict(title="<b>Programas Académicos</b>", orientation="v", yanchor="top", y=1, xanchor="left", x=1.02)
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig_abs, use_container_width=True)
 
-        st.markdown("---")
-
-        # ==================== DISTRIBUCIÓN DE OBJECIONES REALES (TABLA ESTILIZADA CON GRADIENTE) ====================
-        st.subheader("🛑 Distribución del Motivo de Pérdida en Llamadas")
-        st.markdown("*Esta tabla se pinta dinámicamente con degradados verdes según el volumen de pérdidas:*")
-        
-        top_objeciones = df_filtrado[col_objecion_cat].value_counts().reset_index()
-        top_objeciones.columns = ["Categoría de Objeción", "Volumen de Llamadas"]
-        
-        # Muestra la tabla de datos usando un mapa de color interactivo de Pandas basado en verdes
+        # Tabla de distribución absoluta usando barras nativas estilizadas
+        st.markdown("##### 🛑 Distribución del Motivo de Pérdida en Volumen Directo")
         st.dataframe(
-            top_objeciones.style.background_gradient(cmap="Greens", subset=["Volumen de Llamadas"]),
+            df_obj_totales,
+            column_config={
+                "Tipo de Objeción": "Categoría de Objeción",
+                "Total": st.column_config.ProgressColumn(
+                    "Volumen de Llamadas",
+                    format="%d",
+                    min_value=0,
+                    max_value=int(df_obj_totales["Total"].max()),
+                    color="green"
+                ),
+            },
             use_container_width=True,
             hide_index=True
         )
 
         st.markdown("---")
 
-        # ==================== 4. SECCIÓN: INSIGHTS TEXTUALES CON HOVER EFECT ====================
-        st.subheader("💡 Insights Operativos del Cruce de Llamadas")
-
-        if not top_objeciones.empty:
-            mayor_objecion = top_objeciones.iloc[0]["Categoría de Objeción"]
-            cantidad_mayor = top_objeciones.iloc[0]["Volumen de Llamadas"]
+        # ==================== 4. SECCIÓN: INSIGHTS TEXTUALES ABSOLUTOS ====================
+        if not df_obj_totales.empty:
+            mayor_objecion = df_obj_totales.iloc[0]["Tipo de Objeción"]
+            cantidad_mayor = df_obj_totales.iloc[0]["Total"]
             porcentaje_sobre_caidas = (cantidad_mayor / total_llamadas_filtradas) * 100
 
             df_mayor_obj = df_filtrado[df_filtrado[col_objecion_cat] == mayor_objecion]
             prog_afectado = df_mayor_obj[col_programa].value_counts().idxmax() if not df_mayor_obj.empty else "N/A"
-
-            if mayor_objecion == "Tiempo/Flexibilidad":
-                recomendacion_comercial = "Se requiere evaluar estrategias de flexibilización horaria, promoción activa de la modalidad virtual o reestructuración de los speechs de seguimiento."
-            elif mayor_objecion == "Económica":
-                recomendacion_comercial = "Se requiere articulación inmediata con el área de cartera o convenios de financiación para mitigar la deserción telefónica."
-            else:
-                recomendacion_comercial = "Se requiere revisar las mallas curriculares del programa afectado o capacitar a los asesores de la sala."
 
             col_ins1, col_ins2 = st.columns(2)
             with col_ins1:
                 st.markdown(
                     f"""
                     <div class="insight-card">
-                        <h3>🔴 Análisis de Barreras Críticas en Sala</h3>
+                        <h3>🔴 Análisis de Barreras Críticas en Volumen</h3>
                         <ul>
-                            <li><b>Principal obstáculo detectado:</b> La categoría de objeción <b>'{mayor_objecion}'</b> es el motivo número uno por el cual fracasan los closures telefónicos, acumulando un volumen de <b>{cantidad_mayor:,} llamadas</b> (un <b>{porcentaje_sobre_caidas:.1f}%</b> del total filtrado).</li>
-                            <li><b>Programa de la CUN más afectado:</b> El programa académico con mayor vulnerabilidad actual es <b>{prog_afectado}</b>.</li>
-                            <li><i>👉 {recomendacion_comercial}</i></li>
+                            <li><b>Mayor fuga en llamadas:</b> La objeción <b>'{mayor_objecion}'</b> es la que más volumen absoluto genera en la sala, con <b>{cantidad_mayor:,} casos</b> ({porcentaje_sobre_caidas:.1f}% del total general).</li>
+                            <li><b>Carrera con más registros:</b> <b>{prog_afectado}</b> es quien más suma unidades en esta métrica.</li>
                         </ul>
                     </div>
                     """,
@@ -285,13 +282,10 @@ if df is not None and not df.empty:
                 )
             with col_ins2:
                 st.markdown(
-                    f"""
+                    """
                     <div class="insight-card">
-                        <h3>📞 Métricas Operativas del COE</h3>
-                        <ul>
-                            <li><b>Volumen de Esfuerzo:</b> Sobre el universo base de <b>{total_universo_llamadas:,} llamadas</b>, el cruce actual consolida <b>{total_llamadas_filtradas:,} llamadas</b> analizadas en los registros reales.</li>
-                            <li><b>Tasa de Penetración del Análisis:</b> El porcentaje de llamadas procesadas respecto al volumen total se ubica en el <b>{porcentaje_penetracion:.2f}%</b>.</li>
-                        </ul>
+                        <h3>📌 Nota del Líder COE</h3>
+                        <p>Los volúmenes absolutos nos indican dónde está la mayor masa de llamadas de la CUN, pero pueden invisibilizar la gravedad de las objeciones en carreras de nicho o menor tamaño.</p>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -299,11 +293,109 @@ if df is not None and not df.empty:
 
         st.markdown("---")
 
-        # ==================== 5. SECCIÓN: GLOSARIO EXPLICATIVO EN HTML MAQUETADO ====================
+        # ==================== 5. ACORDEÓN COMPLETO: ANÁLISIS PORCENTUAL POR PROGRAMA ====================
+        with st.expander("📊 ANÁLISIS PORCENTUAL POR PROGRAMA (Normalización de Impacto Actualizado)"):
+            st.markdown("### 🔍 ¿Qué analiza esta sección?")
+            st.markdown("""
+            *Esta pestaña equilibra la balanza. Aquí cada programa académico calcula su distribución internamente sobre el **100% de sus propias llamadas caídas**.*
+            *Evita que las carreras masivas tapen los problemas críticos de las carreras pequeñas. **¡Aquí medimos tasas de fricción real!***
+            """)
+            
+            # 1. Calcular los porcentajes internos por carrera
+            # Agrupamos por Programa y Objeción para contar
+            df_pct_base = df_filtrado.groupby([col_programa, col_objecion_cat]).size().reset_index(name="Conteo")
+            
+            # Sacamos los totales de cada carrera individual
+            df_totales_por_carrera = df_filtrado[col_programa].value_counts().reset_index()
+            df_totales_por_carrera.columns = [col_programa, "Total_Carrera"]
+            
+            # Cruzamos y calculamos el porcentaje relativo de cada objeción en esa carrera específica
+            df_pct_final = pd.merge(df_pct_base, df_totales_por_carrera, on=col_programa)
+            df_pct_final["Porcentaje del Programa"] = (df_pct_final["Conteo"] / df_pct_final["Total_Carrera"]) * 100
+            
+            # Ordenamos para la gráfica
+            df_pct_ranking = df_pct_final.groupby(col_objecion_cat)["Porcentaje del Programa"].mean().reset_index()
+            df_pct_ranking = df_pct_ranking.sort_values(by="Porcentaje del Programa", ascending=False)
+
+            # 2. Gráfica de Barras Apiladas al 100% (Enfoque Relativo usando escala azul institucional)
+            fig_pct = px.bar(
+                df_pct_final,
+                x="Porcentaje del Programa",
+                y=col_objecion_cat,
+                color=col_programa,
+                orientation="h",
+                color_discrete_sequence=px.colors.sequential.Blues_r,
+                category_orders={col_objecion_cat: df_pct_ranking[col_objecion_cat].tolist()},
+                labels={"Porcentaje del Programa": "Porcentaje Interno de Impacto (%)", col_objecion_cat: "Categoría de Objeción"}
+            )
+            fig_pct.update_layout(
+                yaxis={"categoryorder": "total ascending"},
+                margin=dict(l=220, r=20, t=20, b=20),
+                height=500,
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                legend=dict(title="<b>Distribución por Carrera</b>", orientation="v", yanchor="top", y=1, xanchor="left", x=1.02)
+            )
+            st.plotly_chart(fig_pct, use_container_width=True)
+
+            # 3. Tabla de Datos Porcentual Estilizada
+            st.markdown("##### 📈 Tabla de Fricción Relativa (% Promedio de Afectación)")
+            df_tabla_pct = df_pct_final.groupby(col_objecion_cat).agg(
+                Porcentaje_Promedio=("Porcentaje del Programa", "mean"),
+                Carrera_Mas_Golpeada=(col_programa, lambda x: df_pct_final.loc[x.index].sort_values(by="Porcentaje del Programa", ascending=False).iloc[0][col_programa]),
+                Porcentaje_Maximo=("Porcentaje del Programa", "max")
+            ).reset_index().sort_values(by="Porcentaje_Promedio", ascending=False)
+
+            st.dataframe(
+                df_tabla_pct,
+                column_config={
+                    "col_objecion_cat": "Categoría de Objeción",
+                    "Porcentaje_Promedio": st.column_config.NumberColumn("Fricción Promedio", format="%.2f %%"),
+                    "Carrera_Mas_Golpeada": "Programa con Mayor Fricción",
+                    "Porcentaje_Maximo": st.column_config.ProgressColumn("Impacto Máximo Local", format="%.2f %%", min_value=0, max_value=100, color="blue")
+                },
+                use_container_width=True,
+                hide_index=True
+            )
+
+            # 4. Insights Porcentuales Dinámicos
+            if not df_tabla_pct.empty:
+                peor_obj_pct = df_tabla_pct.iloc[0][col_objecion_cat]
+                promedio_peor = df_tabla_pct.iloc[0]["Porcentaje_Promedio"]
+                carrera_critica = df_tabla_pct.iloc[0]["Carrera_Mas_Golpeada"]
+                max_critico = df_tabla_pct.iloc[0]["Porcentaje_Maximo"]
+
+                col_pct_ins1, col_pct_ins2 = st.columns(2)
+                with col_pct_ins1:
+                    st.markdown(
+                        f"""
+                        <div class="insight-card-pct">
+                            <h3>🔵 Hallazgo Relativo Crítico (Tasas de Rebote)</h3>
+                            <ul>
+                                <li><b>Alerta Máxima Proporcional:</b> Analizando los porcentajes internos, la objeción de <b>'{peor_obj_pct}'</b> lidera con un índice de fricción promedio del <b>{promedio_peor:.2f}%</b> entre todos los programas.</li>
+                                <li><b>Punto de Dolor Localizado:</b> El programa académico donde esta objeción es más destructiva es <b>{carrera_critica}</b>, representando un impresionante <b>{max_critico:.2f}%</b> de sus llamadas totales caídas.</li>
+                            </ul>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                with col_pct_ins2:
+                    st.markdown(
+                        f"""
+                        <div class="insight-card-pct">
+                            <h3>💡 Plan de Acción Comercial COE</h3>
+                            <p>¡Atención! Aunque la carrera <b>{carrera_critica}</b> tenga pocas llamadas en volumen absoluto, el <b>{max_critico:.2f}%</b> de sus cierres se están perdiendo exclusivamente por <b>{peor_obj_pct}</b>. Se sugiere cambiar urgentemente el script comercial enfocado en este nicho para evitar la muerte del programa en el embudo.</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+        st.markdown("---")
+
+        # ==================== 6. SECCIÓN: TABLA GLOSARIO EXPLICATIVO FIJO ====================
         st.subheader("📖 Glosario Técnico: Definición de Objeciones en Sala")
-        st.markdown("Matriz conceptual interactiva utilizada para estandarizar la tipificación dentro del COE de la CUN (pasa el cursor por encima):")
+        st.markdown("Matriz conceptual interactiva utilizada para estandarizar la tipificación dentro del COE de la CUN:")
         
-        # Construcción de tabla responsiva en HTML puro con hover personalizado en CSS
         html_glosario = "<table class='glosario-tabla'><thead><tr><th>Categoría de Objeción</th><th>Significado Comercial / ¿Qué significa en la llamada?</th></tr></thead><tbody>"
         for item in glosario_data:
             html_glosario += f"<tr><td><b>{item['cat']}</b></td><td>{item['significado']}</td></tr>"
