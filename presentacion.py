@@ -192,7 +192,7 @@ if df is not None and not df.empty:
         with kpi_bot1:
             st.metric(label="📉 Tasa de Cobertura del Análisis", value=f"{porcentaje_penetracion:.2f}%")
         with kpi_bot2:
-            st.metric(label="⚠️ Tipologías Activas en Sala", value=total_categorias)
+            st.metric(label="⚠️ Homologaciones", value=total_categorias)
 
         st.markdown("---")
 
