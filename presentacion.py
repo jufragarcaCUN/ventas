@@ -210,30 +210,37 @@ if df is not None and not df.empty:
 
         st.markdown("---")
 
-        # ==================== GRÁFICA INTERACTIVA HORIZONTAL (ANCHO COMPLETO Y COMPLETAMENTE LIMPIA) ====================
-        st.subheader("📈 Top 10 Programas Académicos con Mayor Objecion en Llamadas")
+        # ==================== GRÁFICA INTERACTIVA HORIZONTAL REESTRUCTURADA ====================
+        st.subheader("📈 Distribución de Objeciones por Top 10 Programas Académicos")
 
-        top_programas = df_filtrado[col_programa].value_counts().head(10).reset_index()
-        top_programas.columns = ["Nombre del Programa", "Cantidad de Llamadas"]
+        # Identificar los 10 programas con más llamadas caídas primero
+        top_10_prog_nombres = df_filtrado[col_programa].value_counts().head(10).index
 
-        # Gráfica horizontal interactiva con Plotly Express
+        # Filtrar el dataframe solo para esos 10 programas y agrupar por Programa + Objeción
+        df_top_grafica = df_filtrado[df_filtrado[col_programa].isin(top_10_prog_nombres)]
+        df_agrupado = (
+            df_top_grafica.groupby([col_programa, col_objecion_cat])
+            .size()
+            .reset_index(name="Cantidad de Llamadas")
+        )
+        df_agrupado.columns = ["Nombre del Programa", "Tipo de Objeción", "Cantidad de Llamadas"]
+
+        # Gráfica horizontal apilada (Muestra las objeciones reales dentro de cada barra)
         fig = px.bar(
-            top_programas,
+            df_agrupado,
             x="Cantidad de Llamadas",
             y="Nombre del Programa",
+            color="Tipo de Objeción",
             orientation="h",
-            color="Cantidad de Llamadas",
-            color_continuous_scale=["#1E5D2F", "#1E5D2F"],
+            color_discrete_sequence=px.colors.sequential.Greens_r, # Degradados verdes institucionales
+            labels={"Tipo de Objeción": "Objeción Detectada"}
         )
 
         fig.update_layout(
             yaxis={"categoryorder": "total ascending"},
-            margin=dict(
-                l=320, r=20, t=20, b=20
-            ),  # 320px fijos a la izquierda para que quepa todo el texto
-            height=600,
-            showlegend=False,
-            coloraxis_showscale=False,
+            margin=dict(l=320, r=20, t=20, b=20),  # Espacio para los nombres largos de carreras
+            height=650,
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         )
 
         st.plotly_chart(fig, use_container_width=True)
