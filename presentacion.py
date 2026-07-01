@@ -40,8 +40,7 @@ st.title("🎯 Análisis de Objeciones COE - CUN")
 st.markdown("### *Informe de Auditoría y Control de Llamadas Operativas*")
 st.markdown("---")
 
-# Ruta física de tu Excel original en Windows
-RUTA_REAL_EXCEL = r"C:\Users\juan_garnicac\Documents\ProyectosVisual\Ventas\presentaciones\carreras_homologadas_1.xlsx"
+RUTA_REAL_EXCEL = "carreras_homologadas_1.xlsx"
 
 # ==================== 2. TABLA EXPLICATIVA (GLOSARIO REAL DE LLAMADAS) ====================
 glosario_data = {
